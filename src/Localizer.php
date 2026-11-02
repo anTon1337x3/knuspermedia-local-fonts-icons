@@ -64,17 +64,44 @@ class Localizer {
 	}
 
 	/**
-	 * @return string[] URLs of the Font Awesome Kits seen on this site so far.
+	 * @return string[] URLs of the Font Awesome Kits and scripts seen on this site so far.
 	 */
-	public function known_kits() {
+	public function known_scripts() {
 		return array_keys(
 			array_filter(
 				$this->map,
 				static function ( $entry ) {
-					return ! empty( $entry['version'] );
+					return ! empty( $entry['version'] ) || ! empty( $entry['script'] );
 				}
 			)
 		);
+	}
+
+	/**
+	 * Font Awesome Kits and Font Awesome's JavaScript are replaced by local stylesheets of the same release.
+	 * The script is remembered, so its replacement is enqueued on every page view.
+	 *
+	 * @return string[] Local stylesheet URLs.
+	 */
+	public function script_stylesheets( $script_url ) {
+		if ( Hosts::is_kit_script( $script_url ) ) {
+			return $this->kit_stylesheets( $script_url );
+		}
+
+		$script_url = preg_replace( '~[?#].*$~', '', Hosts::normalize( $script_url ) );
+		$css        = Hosts::fontawesome_script_css( $script_url );
+
+		if ( ! $css ) {
+			return [];
+		}
+
+		if ( empty( $this->map[ $script_url ]['script'] ) ) {
+			$this->remember( $script_url, [ 'file' => '', 'type' => 'fontawesome', 'script' => $css ] );
+		}
+
+		$local = $this->localize( $css );
+
+		return $local ? [ $local ] : [];
 	}
 
 	/**
@@ -83,8 +110,8 @@ class Localizer {
 	public function localize( $url ) {
 		$url = Hosts::normalize( preg_replace( '~#.*$~', '', $url ) );
 
-		// Kits are JavaScript that loads more from Font Awesome; Processor swaps the whole <script> tag instead.
-		if ( Hosts::is_kit_script( $url ) ) {
+		// JavaScript is never stored; Processor replaces script tags instead.
+		if ( Hosts::is_script( $url ) ) {
 			return false;
 		}
 

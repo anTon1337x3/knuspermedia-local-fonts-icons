@@ -4,7 +4,7 @@ Tags: google fonts, font awesome, gdpr, dsgvo, local fonts
 Requires at least: 5.8
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,13 +21,15 @@ This plugin is not affiliated with Google or Fonticons, Inc. (Font Awesome).
 = What it handles =
 
 * Google Fonts stylesheets (CSS API v1 and v2), reduced to the subsets you need, with `font-display: swap`
-* Font Awesome from its own CDN and from cdnjs, jsDelivr and BootstrapCDN (CSS and JavaScript)
-* Font Awesome Kits, replaced by a local copy of Font Awesome Free in the kit's version
+* Font Awesome stylesheets from its own CDN and from cdnjs, jsDelivr and BootstrapCDN
+* Font Awesome's JavaScript version and Font Awesome Kits, replaced by the local stylesheet of the same release (Font Awesome Free for kits)
 * `@import` of Google Fonts / Font Awesome inside theme and plugin stylesheets, also nested
-* Inline styles, URLs inside inline scripts and JSON, and the Web Font Loader
+* Inline styles, URLs inside inline scripts and JSON, and the Web Font Loader (replaced by a copy bundled with the plugin)
 * `preconnect` / `dns-prefetch` hints to these servers
 * Fonts that scripts add later in the browser (sliders, page builders, maps), blocked by an optional JavaScript guard
 * Local file paths contain no third-party host names, so source code scanners don't report false positives
+
+Only stylesheets and font files are stored, in `wp-content/uploads/knuspermedia-local-fonts-icons/`. The plugin never stores JavaScript.
 
 = Check your pages =
 
@@ -46,10 +48,10 @@ This plugin works as a download service for files your site already loads from t
 
 Your server contacts a service only when one of your pages references a file from it: once per file, on the first page view after the file appears on your site, after the cache is cleared, or when you use "Check page". Each request sends the URL of the requested file, your server's IP address, a browser user agent string and your site's address as referrer (Font Awesome Pro and Kits only deliver files to registered domains). No data about your visitors is sent.
 
-**Google Fonts** (fonts.googleapis.com, fonts.gstatic.com, ajax.googleapis.com for the Web Font Loader), provided by Google LLC: used to download the Google Fonts stylesheets and font files your pages use.
+**Google Fonts** (fonts.googleapis.com, fonts.gstatic.com), provided by Google LLC: used to download the Google Fonts stylesheets and font files your pages use. The Web Font Loader on ajax.googleapis.com is never contacted; the plugin uses its bundled copy instead.
 [Terms of Service](https://policies.google.com/terms), [Privacy Policy](https://policies.google.com/privacy)
 
-**Font Awesome** (use.fontawesome.com, pro.fontawesome.com, kit.fontawesome.com, ka-f.fontawesome.com), provided by Fonticons, Inc.: used to download the Font Awesome stylesheets, fonts and scripts your pages use, and to read the version of a Font Awesome Kit.
+**Font Awesome** (use.fontawesome.com, pro.fontawesome.com, kit.fontawesome.com, ka-f.fontawesome.com), provided by Fonticons, Inc.: used to download the Font Awesome stylesheets and fonts your pages use, and to read the version of a Font Awesome Kit.
 [Terms of Service](https://fontawesome.com/tos), [Privacy Policy](https://fontawesome.com/privacy)
 
 **jsDelivr** (cdn.jsdelivr.net; BootstrapCDN at maxcdn, stackpath and netdna.bootstrapcdn.com is served by jsDelivr): used to download Font Awesome files your pages load from jsDelivr or BootstrapCDN, and the Font Awesome Free files that replace a Font Awesome Kit.
@@ -59,6 +61,10 @@ Your server contacts a service only when one of your pages references a file fro
 [Terms of Service](https://www.cloudflare.com/website-terms/), [Privacy Policy](https://www.cloudflare.com/privacypolicy/)
 
 You can switch off Google Fonts or Font Awesome handling separately in the settings; the plugin then doesn't contact that service.
+
+== Bundled libraries ==
+
+* [Web Font Loader](https://github.com/typekit/webfontloader) 1.6.28 by Adobe Systems and Google, Apache License 2.0, in `assets/vendor/webfontloader/` (minified as published; source code at the link). Used instead of the copy on Google's CDN when a page loads Google Fonts through the Web Font Loader.
 
 == Installation ==
 
@@ -73,6 +79,10 @@ You can switch off Google Fonts or Font Awesome handling separately in the setti
 
 Yes. Fonts the builder adds to the page are localized, and fonts its scripts add later in the browser are blocked by the JavaScript guard. The plugin doesn't run inside the builder's editor preview.
 
+= What happens to Font Awesome's JavaScript version? =
+
+The script (e.g. `js/all.min.js`) is replaced by the stylesheet of the same release (`css/all.min.css`). Icons look the same; features that only exist in the SVG version, such as layers, masking and power transforms, are not available. A script enqueued through WordPress is replaced right away, a script tag that a theme prints directly from the next page view on.
+
 = What about Font Awesome Kits and Pro? =
 
 A kit that is enqueued through WordPress is replaced right away. A kit whose script tag a theme prints directly is removed and replaced from the next page view on. Kits are replaced by Font Awesome Free, so Pro icons and custom kit icons are missing; bundle the Pro files with your theme instead. Pro stylesheets loaded from pro.fontawesome.com are mirrored if your domain is allowed in your Font Awesome account.
@@ -86,6 +96,11 @@ No. Only fonts and icons are handled. Other Google services need consent from yo
 Append `?nowpdf` to the URL.
 
 == Changelog ==
+
+= 1.3.0 =
+* JavaScript is never stored: Font Awesome's JavaScript is replaced by its stylesheet, the Web Font Loader is bundled with the plugin.
+* SVG files are no longer stored.
+* Local copies are stored in uploads/knuspermedia-local-fonts-icons.
 
 = 1.2.0 =
 * Renamed to knuspermedia Local Fonts & Icons.

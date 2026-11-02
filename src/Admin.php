@@ -263,6 +263,11 @@ class Admin {
 						<td style="word-break:break-all">
 							<?php if ( ! empty( $entry['version'] ) ) : ?>
 								Font Awesome Free <?php echo esc_html( $entry['version'] ); ?>
+							<?php elseif ( ! empty( $entry['script'] ) ) : ?>
+								<?php
+								/* translators: %s: URL of the stylesheet that replaces a Font Awesome script */
+								echo esc_html( sprintf( __( 'Replaced by the stylesheet %s', 'knuspermedia-local-fonts-icons' ), $entry['script'] ) );
+								?>
 							<?php else : ?>
 								<code><?php echo esc_html( $entry['file'] ); ?></code>
 							<?php endif; ?>

@@ -87,6 +87,35 @@ class Hosts {
 	}
 
 	/**
+	 * JavaScript is never stored locally, so script URLs are replaced instead of localized.
+	 */
+	public static function is_script( $url ) {
+		return strtolower( pathinfo( (string) wp_parse_url( self::normalize( $url ), PHP_URL_PATH ), PATHINFO_EXTENSION ) ) === 'js';
+	}
+
+	public static function is_webfont_loader( $url ) {
+		$parts = wp_parse_url( self::normalize( $url ) );
+
+		return strtolower( $parts['host'] ?? '' ) === 'ajax.googleapis.com'
+			&& preg_match( '~^/ajax/libs/webfont/[^/]+/webfont\.js$~', $parts['path'] ?? '' );
+	}
+
+	/**
+	 * The CSS file of the same Font Awesome release, e.g. …/js/all.min.js becomes …/css/all.min.css.
+	 *
+	 * @return string|null Null if the URL isn't a Font Awesome script with a CSS counterpart.
+	 */
+	public static function fontawesome_script_css( $url ) {
+		$url = preg_replace( '~[?#].*$~', '', self::normalize( $url ) );
+
+		if ( self::classify( $url ) !== 'fontawesome' || self::is_kit_script( $url ) || ! preg_match( '~^(.+)/js/([^/]+)\.js$~', $url, $match ) ) {
+			return null;
+		}
+
+		return $match[1] . '/css/' . $match[2] . '.css';
+	}
+
+	/**
 	 * Decodes HTML entities and makes protocol-relative and http URLs absolute https URLs.
 	 */
 	public static function normalize( $url ) {

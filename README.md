@@ -9,15 +9,16 @@ The plugin buffers the HTML output of every frontend page (including the login p
 | Embedding | What happens |
 |---|---|
 | `<link href="//fonts.googleapis.com/css?family=…">` (API v1 and `css2`) | The stylesheet is fetched server-side, reduced to the selected subsets, `font-display` is added, all WOFF2 files are stored locally |
-| Font Awesome via `use.fontawesome.com`, `pro.fontawesome.com`, `cdnjs`, `jsdelivr`, `maxcdn/stackpath/netdna.bootstrapcdn.com` (CSS and JS) | CSS and webfonts are mirrored, `integrity` attributes are removed |
-| Font Awesome Kit `<script src="https://kit.fontawesome.com/xxxx.js">` | Replaced by a local Font Awesome Free in the kit's version (plus v4 shims) |
+| Font Awesome via `use.fontawesome.com`, `pro.fontawesome.com`, `cdnjs`, `jsdelivr`, `maxcdn/stackpath/netdna.bootstrapcdn.com` (CSS) | CSS and webfonts are mirrored, `integrity` attributes are removed |
+| Font Awesome Kit `<script src="https://kit.fontawesome.com/xxxx.js">` | Replaced by a local Font Awesome Free in the kit's version (plus v4 shims), enqueued with `wp_enqueue_style` |
+| Font Awesome JavaScript (`…/js/all.min.js`) | Replaced by the local stylesheet of the same release (`…/css/all.min.css`) |
 | `@import` in theme / plugin stylesheets (also nested) | A cleaned copy of the stylesheet is served |
 | Inline `<style>@import …</style>`, URLs in JS / JSON (`https:\/\/fonts…`) | Replaced by local URLs |
-| Web Font Loader (`WebFont.load({google:{families:[…]}})`) | Switched to the `custom` module with a local stylesheet |
+| Web Font Loader (`WebFont.load({google:{families:[…]}})`) | Loaded from the copy bundled in `assets/vendor/webfontloader/` and switched to the `custom` module with a local stylesheet |
 | `preconnect` / `dns-prefetch` to Google / Font Awesome | Removed, as are hints for CDNs that are no longer used afterwards |
 | Fonts injected by JavaScript (sliders, widgets, Divi sticky elements, Google Maps …) | Blocked in the browser (JS guard, can be disabled): via `href`/`src`, `setAttribute`, `appendChild`/`append` & co. (e.g. jQuery `.append('<link …>')`), `innerHTML`, `insertAdjacentHTML` and `document.write` |
 
-Files are downloaded once on the first page view; afterwards everything is served from `wp-content/uploads/local-fonts/` (subfolders `google-fonts/` and `font-awesome/`). The providers' host names appear neither in the local paths nor in the JS guard, so GDPR scanners that search the page source for `fonts.googleapis.com` don't raise false alarms.
+Files are downloaded once on the first page view; afterwards everything is served from `wp-content/uploads/knuspermedia-local-fonts-icons/` (subfolders `google-fonts/` and `font-awesome/`). Only stylesheets and font files are stored there, never JavaScript or SVG. The providers' host names appear neither in the local paths nor in the JS guard, so GDPR scanners that search the page source for `fonts.googleapis.com` don't raise false alarms.
 
 If a file can't be downloaded, the embedding is blocked (fallback font instead of a data leak) and retried after 15 minutes.
 

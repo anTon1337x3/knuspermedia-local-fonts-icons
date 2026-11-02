@@ -37,11 +37,18 @@ class Processor {
 		add_action( 'template_redirect', [ $this, 'start_buffer' ], 1 );
 		add_action( 'login_init', [ $this, 'start_buffer' ], 1 );
 
-		// The guard is enqueued first, so it runs before any other script; kits are replaced after everything is enqueued.
+		// The guard is enqueued first, so it runs before any other script; scripts are replaced after everything is enqueued.
 		foreach ( [ 'wp_enqueue_scripts', 'login_enqueue_scripts' ] as $hook ) {
 			add_action( $hook, [ $this, 'enqueue_guard' ], PHP_INT_MIN );
-			add_action( $hook, [ $this, 'enqueue_kits' ], PHP_INT_MAX );
+			add_action( $hook, [ $this, 'replace_enqueued_scripts' ], PHP_INT_MAX );
 		}
+	}
+
+	/**
+	 * Web Font Loader bundled with this plugin, used instead of the copy on Google's CDN.
+	 */
+	public static function webfont_loader_url() {
+		return plugins_url( 'assets/vendor/webfontloader/webfont.js', WPDF_FILE );
 	}
 
 	/**
@@ -66,29 +73,38 @@ class Processor {
 	}
 
 	/**
-	 * Font Awesome Kits are replaced by the matching Font Awesome Free release, stored locally. Kits enqueued through
-	 * WordPress are emptied; kits written directly into a theme are removed from the HTML and remembered, so their
-	 * replacement is enqueued from then on.
+	 * Scripts of Google Fonts and Font Awesome are never stored locally:
+	 * the Web Font Loader is swapped for the copy bundled with this plugin, and Font Awesome Kits and Font Awesome's
+	 * JavaScript are replaced by local stylesheets of the same release. Scripts enqueued through WordPress are changed
+	 * here; scripts printed directly by a theme are removed from the HTML and remembered, so their replacement is
+	 * enqueued from then on.
 	 */
-	public function enqueue_kits() {
-		if ( ! Settings::get( 'fontawesome' ) || ! $this->should_process() ) {
+	public function replace_enqueued_scripts() {
+		if ( ! $this->should_process() ) {
 			return;
 		}
 
-		$kits    = Localizer::instance()->known_kits();
-		$scripts = wp_scripts();
+		$replaced = Settings::get( 'fontawesome' ) ? Localizer::instance()->known_scripts() : [];
 
-		foreach ( $scripts->registered as $script ) {
-			if ( is_string( $script->src ) && Hosts::is_kit_script( $script->src ) ) {
-				$kits[] = $script->src;
-				// Keeps the handle, so scripts that depend on the kit still load.
-				$script->src = false;
+		foreach ( wp_scripts()->registered as $script ) {
+			if ( ! is_string( $script->src ) || ! Hosts::is_handled( $script->src ) || ! Hosts::is_script( $script->src ) ) {
+				continue;
 			}
+
+			if ( Hosts::is_webfont_loader( $script->src ) ) {
+				$script->src = self::webfont_loader_url();
+				$script->ver = WPDF_VERSION;
+				continue;
+			}
+
+			$replaced[] = $script->src;
+			// Keeps the handle, so scripts that depend on it still load.
+			$script->src = false;
 		}
 
-		foreach ( array_unique( $kits ) as $kit ) {
-			foreach ( Localizer::instance()->kit_stylesheets( $kit ) as $url ) {
-				wp_enqueue_style( 'wpdf-fa-kit-' . substr( md5( $url ), 0, 8 ), $url, [], WPDF_VERSION );
+		foreach ( array_unique( $replaced ) as $script_url ) {
+			foreach ( Localizer::instance()->script_stylesheets( $script_url ) as $url ) {
+				wp_enqueue_style( 'wpdf-fa-' . substr( md5( $url ), 0, 8 ), $url, [], WPDF_VERSION );
 			}
 		}
 	}
@@ -152,7 +168,7 @@ class Processor {
 
 	public function process( $html ) {
 		$html = $this->remove_resource_hints( $html );
-		$html = $this->replace_kits( $html );
+		$html = $this->replace_scripts( $html );
 		$html = $this->process_tags( $html );
 		$html = $this->process_webfont_loader( $html );
 		$html = $this->replace_remaining( $html );
@@ -209,10 +225,10 @@ class Processor {
 	}
 
 	/**
-	 * Removes <script src="https://kit.fontawesome.com/abc123.js"> tags that a theme prints directly. The kit is
-	 * remembered, so enqueue_kits() adds the local replacement from the next page view on.
+	 * Removes Font Awesome Kit and Font Awesome script tags that a theme prints directly. The script is remembered,
+	 * so replace_enqueued_scripts() adds its local stylesheet replacement from the next page view on.
 	 */
-	private function replace_kits( $html ) {
+	private function replace_scripts( $html ) {
 		if ( ! Settings::get( 'fontawesome' ) ) {
 			return $html;
 		}
@@ -222,11 +238,11 @@ class Processor {
 			static function ( $match ) {
 				$src = self::get_attribute( $match[0], 'src' );
 
-				if ( ! $src || ! Hosts::is_kit_script( $src ) ) {
+				if ( ! $src || ! Hosts::is_script( $src ) || Hosts::classify( $src ) !== 'fontawesome' ) {
 					return $match[0];
 				}
 
-				Localizer::instance()->kit_stylesheets( $src );
+				Localizer::instance()->script_stylesheets( $src );
 
 				return '';
 			},
@@ -255,7 +271,7 @@ class Processor {
 					$new = null;
 
 					if ( Hosts::is_handled( $value ) ) {
-						$new = Localizer::instance()->localize( $value ) ?: self::BLOCKED;
+						$new = self::replacement( $value );
 					} elseif ( strtolower( $match[1] ) === 'link' && Settings::get( 'local_css' ) ) {
 						$new = Localizer::instance()->local_css( Hosts::normalize( $value ) );
 					}
@@ -338,7 +354,12 @@ class Processor {
 			return null;
 		}
 
-		if ( Hosts::is_kit_script( $url ) ) {
+		if ( Hosts::is_webfont_loader( $url ) ) {
+			return self::webfont_loader_url();
+		}
+
+		// Scripts are never stored locally; Font Awesome scripts are replaced by stylesheets in replace_scripts().
+		if ( Hosts::is_script( $url ) ) {
 			return self::BLOCKED;
 		}
 

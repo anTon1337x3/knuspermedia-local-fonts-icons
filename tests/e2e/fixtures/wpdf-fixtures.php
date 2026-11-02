@@ -20,6 +20,9 @@ add_action(
 		wp_enqueue_style( 'fa6', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css', [], null );
 		wp_enqueue_style( 'fa6-jsdelivr', 'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.1/css/brands.min.css', [], null );
 
+		// Font Awesome as JavaScript (SVG version): replaced by the stylesheet of the same release.
+		wp_enqueue_script( 'fa-js', 'https://use.fontawesome.com/releases/v5.15.4/js/all.js', [], null, false );
+
 		// Font Awesome Kit (fake id: version detection fails and falls back).
 		wp_enqueue_script( 'fa-kit', 'https://kit.fontawesome.com/0123456789.js', [], null, false );
 
@@ -58,6 +61,7 @@ add_action(
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<link rel="preconnect" href="https://use.fontawesome.com">
 		<script src="https://kit.fontawesome.com/9876543210.js" crossorigin="anonymous"></script>
+		<script defer src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/js/brands.min.js"></script>
 		<style>@import url('//fonts.googleapis.com/css?family=Pacifico');</style>
 		<script>var wpdfFixtureConfig = {"fontUrl":"https:\/\/fonts.googleapis.com\/css?family=Poppins:400&display=swap"};</script>
 		<style>

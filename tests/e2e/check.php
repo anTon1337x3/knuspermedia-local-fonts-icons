@@ -33,21 +33,23 @@ check( 'no Google Fonts / Font Awesome URLs in the HTML' . ( $leak ? " (found: $
 check( 'host names appear nowhere in the HTML, not even in local paths (scanner simulation)', ! preg_match( '~googleapis|gstatic|\.fontawesome\.com~i', $html ) );
 check( 'no preconnect / dns-prefetch to Google, Font Awesome or unused CDNs', ! preg_match( '~rel=.(preconnect|dns-prefetch).[^>]*(gstatic|googleapis|fontawesome|bootstrapcdn|jsdelivr)~i', $html ) );
 check( 'dns-prefetch for cdnjs, which is still in use, is kept', (bool) preg_match( '~dns-prefetch[^>]*//cdnjs\.cloudflare\.com~', $html ) );
-check( 'no integrity attribute on localized files', ! preg_match( '~local-fonts[^>]*integrity~', $html ) );
-check( 'kits replaced by local Font Awesome Free (wp_enqueue_style)', (bool) preg_match( '~<link[^>]+id=.wpdf-fa-kit-[0-9a-f]{8}-css~', $html ) );
-check( 'kit scripts emptied or removed', ! preg_match( '~<script[^>]+fa-kit~', $html ) );
+check( 'no integrity attribute on localized files', ! preg_match( '~knuspermedia-local-fonts-icons/[^>]*integrity~', $html ) );
+preg_match_all( '~<link[^>]+id=.wpdf-fa-[0-9a-f]{8}-css[^>]+href=.([^"\x27]+)~', $html, $fa );
+check( 'kits and Font Awesome JS replaced by enqueued local stylesheets', count( preg_grep( '~/css/all(\.min)?\.css~', $fa[1] ) ) >= 2 );
+check( 'Font Awesome kit and JS script tags emptied or removed', ! preg_match( '~<script[^>]+(fa-kit|fa-js|font-awesome[^>]*\.js)~', $html ) );
+check( 'Web Font Loader served from the plugin', (bool) preg_match( '~<script[^>]+id=.webfontloader-js.[^>]+src=.[^"\x27]*/plugins/knuspermedia-local-fonts-icons/assets/vendor/webfontloader/webfont\.js~', $html ) );
 check( 'Web Font Loader uses the custom module', strpos( $html, 'custom:{families:["Lato","Oswald"]' ) !== false );
-check( 'JSON-escaped URL replaced completely', (bool) preg_match( '~"fontUrl":"\\\\/wp-content\\\\/uploads\\\\/local-fonts\\\\/[^"]+\.css"~', $html ) );
+check( 'JSON-escaped URL replaced completely', (bool) preg_match( '~"fontUrl":"\\\\/wp-content\\\\/uploads\\\\/knuspermedia-local-fonts-icons\\\\/[^"]+\.css"~', $html ) );
 $guard_at  = strpos( $html, 'id="wpdf-guard-js-after"' );
 $script_at = preg_match( '~<script[^>]+src=~', $html, $s, PREG_OFFSET_CAPTURE ) ? $s[0][1] : PHP_INT_MAX;
 check( 'JS guard runs before any enqueued script file', $guard_at !== false && $guard_at < $script_at );
 check( 'jQuery from cdnjs stays untouched', strpos( $html, 'cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1' ) !== false );
 check( 'documentation link to fontawesome.com stays', strpos( $html, 'https://fontawesome.com/icons' ) !== false );
 check( 'no blocked (failed) embeddings', strpos( $without_js, 'data:,' ) === false );
-check( 'local stylesheet copy with @import served', strpos( $html, '/local-fonts/local-css/' ) !== false );
+check( 'local stylesheet copy with @import served', strpos( $html, '/knuspermedia-local-fonts-icons/local-css/' ) !== false );
 
 echo "Local files:\n";
-preg_match_all( '~/wp-content/uploads/local-fonts/[^"\'\s)\\\\?#]+~', $html, $m );
+preg_match_all( '~/wp-content/uploads/knuspermedia-local-fonts-icons/[^"\'\s)\\\\?#]+~', $html, $m );
 $queue = array_unique( $m[0] );
 $seen  = [];
 check( count( $queue ) . ' local files referenced in the HTML', count( $queue ) >= 8 );
@@ -79,6 +81,7 @@ while ( $queue ) {
 
 $fonts = count( preg_grep( '~\.(woff2?|ttf)$~', array_keys( $seen ) ) );
 check( count( $seen ) . " files reachable ($fonts font files), no external URLs in CSS", $fonts > 10 );
+check( 'no JavaScript or SVG stored', ! preg_grep( '~^/wp-content/uploads/knuspermedia-local-fonts-icons/.*\.(js|svg)$~', array_keys( $seen ) ) );
 check( 'no third-party host names in local file paths', ! preg_grep( '~googleapis|gstatic|fontawesome\.com|cdnjs\.cloudflare|jsdelivr\.net|bootstrapcdn\.com|unpkg\.com~i', array_keys( $seen ) ) );
 
 exit( $failed ? 1 : 0 );

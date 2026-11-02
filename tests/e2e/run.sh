@@ -27,12 +27,21 @@ fi
 
 wp plugin activate knuspermedia-local-fonts-icons >/dev/null
 wp local-fonts-icons flush >/dev/null
+docker compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
 
 status=0
 php check.php "$SITE" || status=1
 
 echo "Page check (WP-CLI):"
 if wp local-fonts-icons scan; then echo "  ✓ scanner finds no references"; else echo "  ✗ scanner reports references"; status=1; fi
+
+echo "Admin page (WP_DEBUG):"
+rendered=$(wp eval 'require_once ABSPATH . "wp-admin/includes/admin.php"; wp_set_current_user( 1 ); ob_start(); ( new WPDsgvoFonts\Admin() )->render(); echo strlen( ob_get_clean() );')
+if (( rendered > 2000 )); then echo "  ✓ settings page renders"; else echo "  ✗ settings page did not render"; status=1; fi
+
+echo "PHP notices (WP_DEBUG, debug.log):"
+log=$(docker compose exec -T wordpress sh -c 'cat /var/www/html/wp-content/debug.log 2>/dev/null' | grep -iE "knuspermedia-local-fonts-icons|WPDsgvoFonts" || true)
+if [[ -z "$log" ]]; then echo "  ✓ none caused by the plugin"; else echo "$log"; echo "  ✗ the plugin caused PHP notices"; status=1; fi
 
 echo "Plugin notices:"
 wp option get wpdf_errors --format=json || echo "  (none)"

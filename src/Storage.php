@@ -5,20 +5,21 @@ namespace WPDsgvoFonts;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * Local copies live in wp-content/uploads/local-fonts/{folder}/{path}.
+ * Local copies live in wp-content/uploads/knuspermedia-local-fonts-icons/{folder}/{path}. Only stylesheets and font
+ * files are stored, never JavaScript or SVG, which could contain executable code.
  */
 class Storage {
-	const DIR = 'local-fonts';
+	const DIR = 'knuspermedia-local-fonts-icons';
 
 	/**
-	 * Folders used under the plugin's earlier names "WP DSGVO Fonts" and "DSGVO Fonts".
+	 * Folders used by earlier versions.
 	 */
-	const LEGACY_DIRS = [ 'wp-dsgvo-fonts', 'dsgvo-fonts' ];
+	const LEGACY_DIRS = [ 'wp-dsgvo-fonts', 'dsgvo-fonts', 'local-fonts' ];
 
 	/**
 	 * Bumped whenever path_for() changes, so copies stored under the old layout get replaced.
 	 */
-	const LAYOUT = 4;
+	const LAYOUT = 5;
 
 	// The host names below are what this plugin looks for in order to replace them with local copies; nothing is
 	// loaded from these hosts in the browser.
@@ -31,7 +32,6 @@ class Storage {
 	const FOLDERS = [
 		'fonts.googleapis.com'       => 'google-fonts/css',
 		'fonts.gstatic.com'          => 'google-fonts/files',
-		'ajax.googleapis.com'        => 'google-fonts/loader',
 		'cdnjs.cloudflare.com'       => 'font-awesome/cdnjs',
 		'cdn.jsdelivr.net'           => 'font-awesome/jsdelivr',
 		'maxcdn.bootstrapcdn.com'    => 'font-awesome/bootstrapcdn',
@@ -41,7 +41,7 @@ class Storage {
 
 	// phpcs:enable PluginCheck.CodeAnalysis.Offloading.OffloadedContent
 
-	const EXTENSIONS = [ 'css', 'js', 'woff2', 'woff', 'ttf', 'otf', 'eot', 'svg' ];
+	const EXTENSIONS = [ 'css', 'woff2', 'woff', 'ttf', 'otf', 'eot' ];
 
 	const CONTENT_TYPES = [
 		'font/woff2'                    => 'woff2',
@@ -53,7 +53,6 @@ class Storage {
 		'application/x-font-ttf'        => 'ttf',
 		'font/otf'                      => 'otf',
 		'application/vnd.ms-fontobject' => 'eot',
-		'image/svg+xml'                 => 'svg',
 		'text/css'                      => 'css',
 	];
 
@@ -80,7 +79,7 @@ class Storage {
 		$dir = self::base_dir();
 
 		if ( wp_mkdir_p( $dir ) && ! file_exists( $dir . '/index.php' ) ) {
-			file_put_contents( $dir . '/index.php', "<?php\n// Silence is golden.\n" );
+			self::filesystem()->put_contents( $dir . '/index.php', "<?php\n// Silence is golden.\n", self::file_mode() );
 		}
 	}
 
@@ -142,7 +141,14 @@ class Storage {
 			return false;
 		}
 
-		return file_put_contents( $file, $contents, LOCK_EX ) !== false;
+		return self::filesystem()->put_contents( $file, $contents, self::file_mode() );
+	}
+
+	/**
+	 * Same permissions WordPress uses for new files (FS_CHMOD_FILE is only defined after WP_Filesystem() ran).
+	 */
+	private static function file_mode() {
+		return defined( 'FS_CHMOD_FILE' ) ? FS_CHMOD_FILE : ( fileperms( ABSPATH . 'index.php' ) & 0777 | 0644 );
 	}
 
 	/**
@@ -174,12 +180,24 @@ class Storage {
 			return;
 		}
 
-		require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
-		require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+		self::filesystem()->rmdir( $dir, true );
+	}
 
-		// Always the direct method: these are our own files in the uploads folder, and flushing also runs on
-		// frontend requests where no FTP credentials could be asked for.
-		( new \WP_Filesystem_Direct( null ) )->rmdir( $dir, true );
+	/**
+	 * Always the direct method: these are our own files in the uploads folder, written during frontend requests
+	 * where no FTP credentials could be asked for.
+	 */
+	private static function filesystem() {
+		static $filesystem;
+
+		if ( ! $filesystem ) {
+			require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-base.php';
+			require_once ABSPATH . 'wp-admin/includes/class-wp-filesystem-direct.php';
+
+			$filesystem = new \WP_Filesystem_Direct( null );
+		}
+
+		return $filesystem;
 	}
 
 	private static function iterate() {
