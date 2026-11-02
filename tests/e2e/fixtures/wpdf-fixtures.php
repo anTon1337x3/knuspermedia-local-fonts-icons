@@ -99,3 +99,11 @@ add_action(
 		<?php
 	}
 );
+
+// Counts page cache purges, so run.sh can check that a newly discovered script purges exactly once.
+add_action(
+	'wpdf_purge_page_caches',
+	static function () {
+		update_option( 'wpdf_fixture_purges', (int) get_option( 'wpdf_fixture_purges', 0 ) + 1, false );
+	}
+);

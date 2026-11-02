@@ -81,7 +81,7 @@ Yes. Fonts the builder adds to the page are localized, and fonts its scripts add
 
 = What happens to Font Awesome's JavaScript version? =
 
-The script (e.g. `js/all.min.js`) is replaced by the stylesheet of the same release (`css/all.min.css`). Icons look the same; features that only exist in the SVG version, such as layers, masking and power transforms, are not available. A script enqueued through WordPress is replaced right away, a script tag that a theme prints directly from the next page view on.
+The script (e.g. `js/all.min.js`) is replaced by the stylesheet of the same release (`css/all.min.css`). Icons look the same; features that only exist in the SVG version, such as layers, masking and power transforms, are not available. A script enqueued through WordPress is replaced right away, a script tag that a theme prints directly from the next page view on; common page caches are purged once at that moment, so the first view isn't kept.
 
 = What about Font Awesome Kits and Pro? =
 
@@ -101,6 +101,7 @@ Append `?nowpdf` to the URL.
 * JavaScript is never stored: Font Awesome's JavaScript is replaced by its stylesheet, the Web Font Loader is bundled with the plugin.
 * SVG files are no longer stored.
 * Local copies are stored in uploads/knuspermedia-local-fonts-icons.
+* When a Font Awesome script printed by the theme is removed for the first time, page caches are purged once, so the page without its replacement stylesheet isn't kept in the cache.
 
 = 1.2.0 =
 * Renamed to knuspermedia Local Fonts & Icons.

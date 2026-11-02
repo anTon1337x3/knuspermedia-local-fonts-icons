@@ -32,6 +32,18 @@ docker compose exec -T wordpress rm -f /var/www/html/wp-content/debug.log
 status=0
 php check.php "$SITE" || status=1
 
+echo "Page cache (simulated, see fixtures/wpdf-page-cache.php):"
+# Forget all known scripts, so the theme's hardcoded Font Awesome scripts are discovered again.
+wp local-fonts-icons flush >/dev/null
+wp option update wpdf_fixture_purges 0 >/dev/null
+cached() { docker compose exec -T wordpress sh -c 'f=/var/www/html/wp-content/uploads/wpdf-e2e-page-cache.html; [ -f $f ] && grep -c "wpdf-fa-" $f || echo none'; }
+curl -fs -o /dev/null "$SITE/?wpdf-cache=1"
+first_cached=$(cached); first_purges=$(wp option get wpdf_fixture_purges)
+curl -fs -o /dev/null "$SITE/?wpdf-cache=1"
+second_cached=$(cached); second_purges=$(wp option get wpdf_fixture_purges)
+if [[ "$first_cached" == none && "$first_purges" == 1 ]]; then echo "  ✓ first view (scripts removed, stylesheets not yet enqueued) is purged from the cache"; else echo "  ✗ first view: cached=$first_cached purges=$first_purges (expected none and 1)"; status=1; fi
+if [[ "$second_cached" != none && "$second_cached" -gt 0 && "$second_purges" == 1 ]]; then echo "  ✓ second view is cached with the replacement stylesheets and doesn't purge again"; else echo "  ✗ second view: stylesheet links in cache=$second_cached purges=$second_purges (expected >0 and 1)"; status=1; fi
+
 echo "Page check (WP-CLI):"
 if wp local-fonts-icons scan; then echo "  ✓ scanner finds no references"; else echo "  ✗ scanner reports references"; status=1; fi
 

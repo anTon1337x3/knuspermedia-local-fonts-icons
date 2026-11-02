@@ -33,6 +33,13 @@ class Processor {
 
 	const ATTRIBUTES = [ 'href', 'src', 'data-href', 'data-src' ];
 
+	/**
+	 * Set when this page removed a Font Awesome script that wasn't known yet, so its replacement is missing here.
+	 *
+	 * @var bool
+	 */
+	private $discovered_script = false;
+
 	public function init() {
 		add_action( 'template_redirect', [ $this, 'start_buffer' ], 1 );
 		add_action( 'login_init', [ $this, 'start_buffer' ], 1 );
@@ -153,6 +160,12 @@ class Processor {
 
 		Localizer::instance()->save();
 
+		// This page lacks the stylesheet for the script just removed; a page cache must not keep it. Runs after
+		// wp_ob_end_flush_all() (shutdown, priority 1), i.e. after page cache plugins stored the page.
+		if ( $this->discovered_script ) {
+			add_action( 'shutdown', [ Cache::class, 'purge_page_caches' ], PHP_INT_MAX );
+		}
+
 		return $html;
 	}
 
@@ -235,11 +248,15 @@ class Processor {
 
 		return preg_replace_callback(
 			'~<script\b[^>]*>\s*</script>~i',
-			static function ( $match ) {
+			function ( $match ) {
 				$src = self::get_attribute( $match[0], 'src' );
 
 				if ( ! $src || ! Hosts::is_script( $src ) || Hosts::classify( $src ) !== 'fontawesome' ) {
 					return $match[0];
+				}
+
+				if ( ! in_array( preg_replace( '~[?#].*$~', '', Hosts::normalize( $src ) ), Localizer::instance()->known_scripts(), true ) ) {
+					$this->discovered_script = true;
 				}
 
 				Localizer::instance()->script_stylesheets( $src );
