@@ -148,7 +148,7 @@ class Storage {
 	 * Same permissions WordPress uses for new files (FS_CHMOD_FILE is only defined after WP_Filesystem() ran).
 	 */
 	private static function file_mode() {
-		return defined( 'FS_CHMOD_FILE' ) ? FS_CHMOD_FILE : ( fileperms( ABSPATH . 'index.php' ) & 0777 | 0644 );
+		return defined( 'FS_CHMOD_FILE' ) ? FS_CHMOD_FILE : 0644;
 	}
 
 	/**

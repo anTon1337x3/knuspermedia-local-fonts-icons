@@ -401,42 +401,38 @@ class Localizer {
 	 * Maps a URL of a stylesheet on this site to its file, if it's inside the WordPress installation.
 	 */
 	public static function url_to_path( $url ) {
-		$parts = wp_parse_url( Hosts::normalize( $url ) );
+		$url = preg_replace( '~[?#].*$~', '', Hosts::resolve( home_url( '/' ), Hosts::normalize( $url ) ) );
 
-		if ( ! empty( $parts['host'] ) && strtolower( $parts['host'] ) !== Hosts::site_host() ) {
+		if ( strtolower( pathinfo( (string) wp_parse_url( $url, PHP_URL_PATH ), PATHINFO_EXTENSION ) ) !== 'css' ) {
 			return null;
 		}
 
-		$path = rawurldecode( $parts['path'] ?? '' );
-
-		if ( strtolower( pathinfo( $path, PATHINFO_EXTENSION ) ) !== 'css' ) {
-			return null;
-		}
-
-		$roots = [
-			rtrim( (string) wp_parse_url( content_url(), PHP_URL_PATH ), '/' ) => WP_CONTENT_DIR,
-			rtrim( (string) wp_parse_url( site_url(), PHP_URL_PATH ), '/' )    => ABSPATH,
+		$uploads = wp_get_upload_dir();
+		$roots   = [
+			get_theme_root_uri( get_stylesheet() ) => get_theme_root( get_stylesheet() ),
+			plugins_url()                          => dirname( WPDF_DIR ),
+			$uploads['baseurl']                    => $uploads['basedir'],
 		];
 
-		foreach ( $roots as $prefix => $dir ) {
-			if ( $prefix !== '' && strpos( $path, $prefix . '/' ) !== 0 ) {
+		// Whole URLs are compared, because themes, plugins and uploads can each live on their own host.
+		$schemeless = preg_replace( '~^[a-z]+:~i', '', $url );
+
+		foreach ( $roots as $root_url => $root_dir ) {
+			$prefix = trailingslashit( preg_replace( '~^[a-z]+:~i', '', $root_url ) );
+
+			if ( stripos( $schemeless, $prefix ) !== 0 ) {
 				continue;
 			}
 
-			$file = realpath( rtrim( $dir, '/' ) . '/' . ltrim( substr( $path, strlen( $prefix ) ), '/' ) );
+			$root    = realpath( $root_dir );
+			$file    = realpath( trailingslashit( $root_dir ) . rawurldecode( substr( $schemeless, strlen( $prefix ) ) ) );
+			$storage = realpath( Storage::base_dir() );
 
-			if ( ! $file || ! is_file( $file ) ) {
+			if ( ! $root || ! $file || ! is_file( $file ) || strpos( $file, trailingslashit( $root ) ) !== 0 ) {
 				return null;
 			}
 
-			$inside_wp = strpos( $file, realpath( ABSPATH ) ) === 0 || strpos( $file, realpath( WP_CONTENT_DIR ) ) === 0;
-			$storage   = realpath( Storage::base_dir() );
-
-			if ( ! $inside_wp || ( $storage && strpos( $file, $storage ) === 0 ) ) {
-				return null;
-			}
-
-			return $file;
+			return $storage && strpos( $file, trailingslashit( $storage ) ) === 0 ? null : $file;
 		}
 
 		return null;

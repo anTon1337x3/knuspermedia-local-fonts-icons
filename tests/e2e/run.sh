@@ -47,6 +47,10 @@ if [[ "$second_cached" != none && "$second_cached" -gt 0 && "$second_purges" == 
 echo "Page check (WP-CLI):"
 if wp local-fonts-icons scan; then echo "  ✓ scanner finds no references"; else echo "  ✗ scanner reports references"; status=1; fi
 
+echo "Stylesheet paths:"
+resolved=$(wp eval 'add_filter( "plugins_url", static function ( $url ) { return str_replace( "http://localhost:8089", "https://cdn.example.com", $url ); } ); $map = [ "https://cdn.example.com/wp-content/plugins/wpdf-fixtures/theme.css?ver=1", "//cdn.example.com/wp-content/plugins/wpdf-fixtures/parts/fonts.css", "https://other.example.com/wp-content/plugins/wpdf-fixtures/theme.css", "https://cdn.example.com/wp-content/plugins/../../wp-admin/css/login.css" ]; foreach ( $map as $url ) { echo WPDsgvoFonts\Localizer::url_to_path( $url ) ? 1 : 0; }')
+if [[ "$resolved" == 1100 ]]; then echo "  ✓ own content host resolved, foreign host and path traversal rejected"; else echo "  ✗ resolved $resolved (expected 1100)"; status=1; fi
+
 echo "Admin page (WP_DEBUG):"
 rendered=$(wp eval 'require_once ABSPATH . "wp-admin/includes/admin.php"; wp_set_current_user( 1 ); ob_start(); ( new WPDsgvoFonts\Admin() )->render(); echo strlen( ob_get_clean() );')
 if (( rendered > 2000 )); then echo "  ✓ settings page renders"; else echo "  ✗ settings page did not render"; status=1; fi

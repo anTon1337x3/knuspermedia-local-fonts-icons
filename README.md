@@ -4,7 +4,7 @@ WordPress plugin that automatically self-hosts **Google Fonts** and **Font Aweso
 
 ## How it works
 
-The plugin buffers the HTML output of every frontend page (including the login page) and rewrites it before it is sent:
+The plugin hooks into the template enhancement output buffer of WordPress (`wp_template_enhancement_output_buffer`, WordPress 6.9+) and rewrites the HTML of every frontend page before it is sent:
 
 | Embedding | What happens |
 |---|---|
@@ -57,7 +57,8 @@ wp local-fonts-icons scan [<url>]   # check a page for remaining references
 
 - **Font Awesome Pro kits:** the Free version is provided locally. Pro icons and custom kit icons are missing. For Pro, bundle the Pro files with the theme yourself.
 - Google services other than fonts (Maps, reCAPTCHA, YouTube, jQuery from `ajax.googleapis.com`) are left untouched; that's the job of a consent tool. Roboto fonts injected by Google Maps are blocked by the JS guard.
-- The WordPress admin is not rewritten, only the frontend and the login page.
+- The WordPress admin is not rewritten. On the login page, only enqueued stylesheets and scripts are replaced, because WordPress doesn't buffer it.
+- Local stylesheets are scanned in the theme, plugins and uploads folders.
 
 ## Tests
 

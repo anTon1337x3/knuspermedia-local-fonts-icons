@@ -1,10 +1,10 @@
 === knuspermedia Local Fonts & Icons ===
 Contributors: knuspermedia
 Tags: google fonts, font awesome, gdpr, dsgvo, local fonts
-Requires at least: 5.8
+Requires at least: 6.9
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,10 @@ The script (e.g. `js/all.min.js`) is replaced by the stylesheet of the same rele
 
 A kit that is enqueued through WordPress is replaced right away. A kit whose script tag a theme prints directly is removed and replaced from the next page view on. Kits are replaced by Font Awesome Free, so Pro icons and custom kit icons are missing; bundle the Pro files with your theme instead. Pro stylesheets loaded from pro.fontawesome.com are mirrored if your domain is allowed in your Font Awesome account.
 
+= Does it cover the login page? =
+
+Yes, for stylesheets and scripts enqueued through WordPress. The login page is not a template, so WordPress doesn't buffer it and files that a plugin prints directly there stay untouched.
+
 = Does it handle Google Maps, reCAPTCHA or YouTube? =
 
 No. Only fonts and icons are handled. Other Google services need consent from your visitors, e.g. through a cookie consent tool. Fonts that Google Maps adds in the browser are blocked by the JavaScript guard.
@@ -96,6 +100,11 @@ No. Only fonts and icons are handled. Other Google services need consent from yo
 Append `?nowpdf` to the URL.
 
 == Changelog ==
+
+= 1.4.0 =
+* Requires WordPress 6.9: pages are rewritten through the template enhancement output buffer of WordPress instead of an own output buffer.
+* On the login page, enqueued stylesheets are replaced directly.
+* Stylesheets are located through the WordPress functions for themes, plugins and uploads, which also works when these are on their own host.
 
 = 1.3.0 =
 * JavaScript is never stored: Font Awesome's JavaScript is replaced by its stylesheet, the Web Font Loader is bundled with the plugin.
