@@ -48,6 +48,13 @@ check( 'documentation link to fontawesome.com stays', strpos( $html, 'https://fo
 check( 'no blocked (failed) embeddings', strpos( $without_js, 'data:,' ) === false );
 check( 'local stylesheet copy with @import served', strpos( $html, '/knuspermedia-local-fonts-icons/local-css/' ) !== false );
 
+$login      = get( $site . '/wp-login.php' );
+$login_leak = preg_match( $forbidden, $login, $found ) ? $found[0] : '';
+
+echo "Login page:\n";
+check( 'no Google Fonts URLs' . ( $login_leak ? " (found: $login_leak)" : '' ), $login_leak === '' );
+check( 'enqueued Google Fonts stylesheet served locally', strpos( $login, '/knuspermedia-local-fonts-icons/google-fonts/css/' ) !== false );
+
 echo "Local files:\n";
 preg_match_all( '~/wp-content/uploads/knuspermedia-local-fonts-icons/[^"\'\s)\\\\?#]+~', $html, $m );
 $queue = array_unique( $m[0] );

@@ -7,7 +7,7 @@
 add_action(
 	'wp_enqueue_scripts',
 	static function () {
-		$dir = content_url( 'mu-plugins/wpdf-fixtures/' );
+		$dir = plugins_url( 'wpdf-fixtures/' );
 
 		// Google Fonts: CSS API v1 (as in the original screenshot), protocol-relative v1 with subset, CSS API v2.
 		wp_enqueue_style( 'taptap-fonts', 'https://fonts.googleapis.com/css?family=Montserrat:400,700|Varela+Round|Siliguri:400,600&display=swap', [], '1.0.0' );
@@ -105,5 +105,13 @@ add_action(
 	'wpdf_purge_page_caches',
 	static function () {
 		update_option( 'wpdf_fixture_purges', (int) get_option( 'wpdf_fixture_purges', 0 ) + 1, false );
+	}
+);
+
+// The login page isn't buffered by WordPress, so enqueued stylesheets are replaced directly.
+add_action(
+	'login_enqueue_scripts',
+	static function () {
+		wp_enqueue_style( 'login-font', 'https://fonts.googleapis.com/css2?family=Inter&display=swap', [], null );
 	}
 );

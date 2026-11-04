@@ -41,14 +41,15 @@ class Processor {
 	private $discovered_script = false;
 
 	public function init() {
-		add_action( 'template_redirect', [ $this, 'start_buffer' ], 1 );
-		add_action( 'login_init', [ $this, 'start_buffer' ], 1 );
+		add_filter( 'wp_template_enhancement_output_buffer', [ $this, 'process_template' ] );
 
 		// The guard is enqueued first, so it runs before any other script; scripts are replaced after everything is enqueued.
 		foreach ( [ 'wp_enqueue_scripts', 'login_enqueue_scripts' ] as $hook ) {
 			add_action( $hook, [ $this, 'enqueue_guard' ], PHP_INT_MIN );
 			add_action( $hook, [ $this, 'replace_enqueued_scripts' ], PHP_INT_MAX );
 		}
+
+		add_action( 'login_enqueue_scripts', [ $this, 'replace_login_styles' ], PHP_INT_MAX );
 	}
 
 	/**
@@ -116,6 +117,30 @@ class Processor {
 		}
 	}
 
+	/**
+	 * WordPress only buffers the output of templates, so stylesheets on the login page are replaced where they're
+	 * enqueued. Stylesheets that a plugin prints directly on the login page are not covered.
+	 */
+	public function replace_login_styles() {
+		if ( ! $this->should_process() ) {
+			return;
+		}
+
+		foreach ( wp_styles()->registered as $style ) {
+			if ( ! is_string( $style->src ) || $style->src === '' ) {
+				continue;
+			}
+
+			if ( Hosts::is_handled( $style->src ) ) {
+				$style->src = self::replacement( $style->src );
+			} elseif ( Settings::get( 'local_css' ) ) {
+				$style->src = Localizer::instance()->local_css( Hosts::normalize( $style->src ) ) ?: $style->src;
+			}
+		}
+
+		Localizer::instance()->save();
+	}
+
 	public function should_process() {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only debug switch, nothing is changed.
 		if ( isset( $_GET['nowpdf'] ) || is_admin() || wp_doing_ajax() || wp_doing_cron() || is_feed() ) {
@@ -140,14 +165,11 @@ class Processor {
 		return (bool) apply_filters( 'wpdf_should_process', true );
 	}
 
-	public function start_buffer() {
-		if ( $this->should_process() ) {
-			ob_start( [ $this, 'process_buffer' ] );
-		}
-	}
-
-	public function process_buffer( $html ) {
-		if ( ! is_string( $html ) || ( stripos( $html, '<html' ) === false && stripos( $html, '<head' ) === false ) || ! $this->is_html_response() ) {
+	/**
+	 * Rewrites the final HTML of a template. WordPress owns the output buffer and only calls this for HTML responses.
+	 */
+	public function process_template( $html ) {
+		if ( ! $this->should_process() ) {
 			return $html;
 		}
 
@@ -167,16 +189,6 @@ class Processor {
 		}
 
 		return $html;
-	}
-
-	private function is_html_response() {
-		foreach ( headers_list() as $header ) {
-			if ( stripos( $header, 'content-type:' ) === 0 ) {
-				return stripos( $header, 'text/html' ) !== false;
-			}
-		}
-
-		return true;
 	}
 
 	public function process( $html ) {
