@@ -1,0 +1,31 @@
+# Publishes a release to the WordPress.org plugin directory when a version tag (e.g. 1.4.0) is pushed:
+# trunk, tags/<version> and the assets (icon from .wordpress-org/). Files listed in .distignore are left out.
+#
+# Needs the repository secrets SVN_USERNAME and SVN_PASSWORD; the SVN password is set in the
+# WordPress.org profile under "Account & Security".
+name: Deploy to WordPress.org
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"
+
+jobs:
+  deploy:
+    name: Deploy to WordPress.org
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Check that the tag matches the plugin version and the stable tag
+        run: |
+          version=$(grep -m1 -E '^ \* Version:' knuspermedia-local-fonts-icons.php | awk '{print $NF}')
+          stable=$(grep -m1 -E '^Stable tag:' readme.txt | awk '{print $NF}')
+          echo "Tag $GITHUB_REF_NAME, plugin version $version, stable tag $stable"
+          [ "$version" = "$GITHUB_REF_NAME" ] && [ "$stable" = "$GITHUB_REF_NAME" ]
+
+      - uses: 10up/action-wordpress-plugin-deploy@2.3.0
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+          SLUG: knuspermedia-local-fonts-icons
