@@ -37,7 +37,9 @@ check( 'no integrity attribute on localized files', ! preg_match( '~knuspermedia
 preg_match_all( '~<link[^>]+id=.wpdf-fa-[0-9a-f]{8}-css[^>]+href=.([^"\x27]+)~', $html, $fa );
 check( 'kits and Font Awesome JS replaced by enqueued local stylesheets', count( preg_grep( '~/css/all(\.min)?\.css~', $fa[1] ) ) >= 2 );
 check( 'Font Awesome kit and JS script tags emptied or removed', ! preg_match( '~<script[^>]+(fa-kit|fa-js|font-awesome[^>]*\.js)~', $html ) );
-check( 'Web Font Loader served from the plugin', (bool) preg_match( '~<script[^>]+id=.webfontloader-js.[^>]+src=.[^"\x27]*/plugins/knuspermedia-local-fonts-icons/assets/vendor/webfontloader/webfont\.js~', $html ) );
+// Attribute order differs between WordPress versions.
+$loader_tag = preg_match( '~<script\b[^>]*\bid=["\x27]webfontloader-js["\x27][^>]*>~', $html, $tag ) ? $tag[0] : '';
+check( 'Web Font Loader served from the plugin', (bool) preg_match( '~\bsrc=["\x27][^"\x27]*/plugins/knuspermedia-local-fonts-icons/assets/vendor/webfontloader/webfont\.js~', $loader_tag ) );
 check( 'Web Font Loader uses the custom module', strpos( $html, 'custom:{families:["Lato","Oswald"]' ) !== false );
 check( 'JSON-escaped URL replaced completely', (bool) preg_match( '~"fontUrl":"\\\\/wp-content\\\\/uploads\\\\/knuspermedia-local-fonts-icons\\\\/[^"]+\.css"~', $html ) );
 $guard_at  = strpos( $html, 'id="wpdf-guard-js-after"' );

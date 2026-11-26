@@ -2,9 +2,9 @@
 Contributors: knuspermedia
 Tags: google fonts, font awesome, gdpr, dsgvo, local fonts
 Requires at least: 6.9
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -100,6 +100,10 @@ No. Only fonts and icons are handled. Other Google services need consent from yo
 Append `?nowpdf` to the URL.
 
 == Changelog ==
+
+= 1.4.1 =
+* Tested with WordPress 7.2 and PHP 8.6.
+* SVG fonts referenced by Font Awesome 4 and 5 are skipped without a download and are no longer reported as errors.
 
 = 1.4.0 =
 * Requires WordPress 6.9: pages are rewritten through the template enhancement output buffer of WordPress instead of an own output buffer.

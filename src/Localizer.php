@@ -105,13 +105,23 @@ class Localizer {
 	}
 
 	/**
+	 * JavaScript (Processor replaces script tags instead) and file types such as the SVG fonts that Font Awesome 4
+	 * and 5 still reference for very old browsers. These are skipped without a download and without a notice.
+	 * URLs without an extension, like Google Fonts stylesheets, are stored by their content type.
+	 */
+	private static function is_never_stored( $url ) {
+		$ext = strtolower( pathinfo( (string) wp_parse_url( $url, PHP_URL_PATH ), PATHINFO_EXTENSION ) );
+
+		return Hosts::is_script( $url ) || ( $ext !== '' && ! in_array( $ext, Storage::EXTENSIONS, true ) );
+	}
+
+	/**
 	 * @return string|false Local URL, or false if the file couldn't be downloaded.
 	 */
 	public function localize( $url ) {
 		$url = Hosts::normalize( preg_replace( '~#.*$~', '', $url ) );
 
-		// JavaScript is never stored; Processor replaces script tags instead.
-		if ( Hosts::is_script( $url ) ) {
+		if ( self::is_never_stored( $url ) ) {
 			return false;
 		}
 
@@ -448,6 +458,14 @@ class Localizer {
 		if ( $this->errors === null ) {
 			$errors       = get_option( self::ERRORS_OPTION, [] );
 			$this->errors = is_array( $errors ) ? $errors : [];
+
+			// Versions 1.3.0 to 1.4.0 logged skipped SVG fonts as errors. Notices about kits (scripts) stay.
+			foreach ( array_keys( $this->errors ) as $url ) {
+				if ( ! Hosts::is_script( $url ) && self::is_never_stored( $url ) ) {
+					unset( $this->errors[ $url ] );
+					$this->errors_dirty = true;
+				}
+			}
 		}
 	}
 
