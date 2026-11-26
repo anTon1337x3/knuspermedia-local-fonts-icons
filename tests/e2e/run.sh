@@ -4,6 +4,9 @@
 #
 #   tests/e2e/run.sh          run the checks (keeps the site running on http://localhost:8089, admin/admin)
 #   tests/e2e/run.sh down     remove containers and volumes
+#
+#   PHP_VERSION=8.6 WP_VERSION=7.2-RC3 tests/e2e/run.sh
+#                             same on another PHP version and/or WordPress release; run "down" before switching
 set -euo pipefail
 
 cd "$(dirname "$0")"
@@ -24,6 +27,13 @@ if ! wp core is-installed; then
 	wp core install --url="$SITE" --title="WPDF E2E" --admin_user=admin --admin_password=admin --admin_email=admin@example.com --skip-email >/dev/null
 	wp rewrite structure '/%postname%/' >/dev/null
 fi
+
+if [[ -n "${WP_VERSION:-}" ]]; then
+	wp core update --version="$WP_VERSION" --force >/dev/null
+	wp core update-db >/dev/null
+fi
+
+echo "WordPress $(wp core version), PHP $(docker compose exec -T wordpress php -r 'echo PHP_VERSION;')"
 
 wp plugin activate knuspermedia-local-fonts-icons >/dev/null
 wp local-fonts-icons flush >/dev/null
@@ -60,6 +70,11 @@ log=$(docker compose exec -T wordpress sh -c 'cat /var/www/html/wp-content/debug
 if [[ -z "$log" ]]; then echo "  ✓ none caused by the plugin"; else echo "$log"; echo "  ✗ the plugin caused PHP notices"; status=1; fi
 
 echo "Plugin notices:"
-wp option get wpdf_errors --format=json || echo "  (none)"
+notices=$(wp eval 'foreach ( get_option( "wpdf_errors", [] ) as $url => $error ) { echo $error["message"], " | ", $url, "\n"; }')
+# The fixtures use made-up kit ids, so these two notices are expected.
+unexpected=$(printf '%s\n' "$notices" | grep -v '^Kit version could not be detected' | grep -v '^$' || true)
+if [[ -z "$unexpected" ]]; then echo "  ✓ only the expected notices about the test kits"; else echo "$unexpected"; echo "  ✗ unexpected notices"; status=1; fi
+legacy=$(wp eval 'update_option( "wpdf_errors", [ "https://use.fontawesome.com/releases/v5.15.4/webfonts/fa-solid-900.svg" => [ "message" => "Unknown file type", "time" => time() ] ] + get_option( "wpdf_errors", [] ), false ); $errors = WPDsgvoFonts\Localizer::instance()->errors(); echo isset( $errors["https://use.fontawesome.com/releases/v5.15.4/webfonts/fa-solid-900.svg"] ) ? "shown" : "hidden", " ", count( $errors );')
+if [[ "$legacy" == "hidden 2" ]]; then echo "  ✓ notices about SVG fonts from 1.3.0/1.4.0 are hidden, kit notices kept"; else echo "  ✗ legacy SVG notice: $legacy (expected hidden 2)"; status=1; fi
 
 exit $status

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       knuspermedia Local Fonts & Icons
  * Description:       Self-hosts Google Fonts and Font Awesome automatically, so visitors' browsers no longer connect to Google or Font Awesome servers.
- * Version:           1.4.0
+ * Version:           1.4.1
  * Requires at least: 6.9
  * Requires PHP:      7.4
  * Author:            Anton Lapko
@@ -13,7 +13,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'WPDF_VERSION', '1.4.0' );
+define( 'WPDF_VERSION', '1.4.1' );
 define( 'WPDF_FILE', __FILE__ );
 define( 'WPDF_DIR', plugin_dir_path( __FILE__ ) );
 
